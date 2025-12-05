@@ -16,11 +16,11 @@ if ($Version -notmatch '^\d+\.\d+\.\d+$') {
     exit 1
 }
 
-# Script is in releases/, so project root is one level up
+# Script is in scripts/, so project root is one level up
 $ScriptDir = $PSScriptRoot
 $ProjectRoot = Split-Path $ScriptDir -Parent
 $DistFolder = Join-Path $ProjectRoot "dist"
-$ReleasesFolder = $ScriptDir  # Script is already in releases folder
+$ReleasesFolder = Join-Path $ProjectRoot "releases"
 $ReleaseName = "KVGroove-v$Version-win64"
 $ZipName = "$ReleaseName.zip"
 $ZipPath = Join-Path $ReleasesFolder $ZipName

@@ -37,3 +37,7 @@ ENV/
 # OS
 .DS_Store
 Thumbs.db
+
+# Release artifacts
+releases/
+*.zip
