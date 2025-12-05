@@ -8,6 +8,7 @@ from tkinter import ttk, filedialog, messagebox
 from typing import Callable, Optional
 
 from core.settings import SettingsManager
+from ui.themes import get_theme_list
 
 
 class SettingsDialog:
@@ -111,24 +112,10 @@ class SettingsDialog:
         
         self.theme_var = tk.StringVar(value=self.settings.get('theme', 'light'))
         
-        ttk.Radiobutton(theme_frame, text="Light", value="light",
-                       variable=self.theme_var).pack(anchor=tk.W)
-        ttk.Radiobutton(theme_frame, text="Dark", value="dark",
-                       variable=self.theme_var).pack(anchor=tk.W)
-        ttk.Radiobutton(theme_frame, text="🌈 NEON (Wild!)", value="neon",
-                       variable=self.theme_var).pack(anchor=tk.W)
-        ttk.Radiobutton(theme_frame, text="🌅 Retrowave (80s)", value="retrowave",
-                       variable=self.theme_var).pack(anchor=tk.W)
-        ttk.Radiobutton(theme_frame, text="💻 Hacker (Matrix)", value="hacker",
-                       variable=self.theme_var).pack(anchor=tk.W)
-        ttk.Radiobutton(theme_frame, text="🌋 LAVA (Red Hot!)", value="lava",
-                       variable=self.theme_var).pack(anchor=tk.W)
-        ttk.Radiobutton(theme_frame, text="⚡ Electric Lime", value="electric_lime",
-                       variable=self.theme_var).pack(anchor=tk.W)
-        ttk.Radiobutton(theme_frame, text="🍬 Bubblegum (Pink!)", value="bubblegum",
-                       variable=self.theme_var).pack(anchor=tk.W)
-        ttk.Radiobutton(theme_frame, text="🚀 Commander Keen", value="commander_keen",
-                       variable=self.theme_var).pack(anchor=tk.W)
+        # Dynamically create radio buttons from tkthemes
+        for theme_id, theme_name in get_theme_list():
+            ttk.Radiobutton(theme_frame, text=theme_name, value=theme_id,
+                           variable=self.theme_var).pack(anchor=tk.W)
         
         # Visualizations
         vis_frame = ttk.LabelFrame(frame, text="Visualizations", padding=10)
