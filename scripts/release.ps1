@@ -38,16 +38,35 @@ if ($LASTEXITCODE -ne 0) {
 }
 Write-Host "Build complete!" -ForegroundColor Green
 
-# Step 2: Create zip file
-Write-Host "[2/6] Creating zip archive..." -ForegroundColor Yellow
+
+# Step 2: Ensure releases folder exists and copy exe
+Write-Host "[2/6] Ensuring releases folder exists..." -ForegroundColor Yellow
+if (!(Test-Path $ReleasesFolder)) {
+    New-Item -ItemType Directory -Path $ReleasesFolder | Out-Null
+    Write-Host "Created releases folder at $ReleasesFolder" -ForegroundColor Green
+}
+
+# Copy exe to releases folder
+$ExeSource = "$DistFolder\kvgroove.exe"
+$ExeDest = Join-Path $ReleasesFolder "kvgroove.exe"
+if (Test-Path $ExeSource) {
+    Copy-Item $ExeSource $ExeDest -Force
+    Write-Host "Copied kvgroove.exe to releases folder." -ForegroundColor Green
+} else {
+    Write-Host "Error: kvgroove.exe not found in dist folder!" -ForegroundColor Red
+    exit 1
+}
+
+# Step 3: Create zip file
+Write-Host "[3/6] Creating zip archive..." -ForegroundColor Yellow
 if (Test-Path $ZipPath) {
     Remove-Item $ZipPath -Force
 }
-Compress-Archive -Path "$DistFolder\kvgroove.exe" -DestinationPath $ZipPath -CompressionLevel Optimal
+Compress-Archive -Path $ExeDest -DestinationPath $ZipPath -CompressionLevel Optimal
 Write-Host "Created: $ZipName" -ForegroundColor Green
 
 # Get file size
-$ExeSize = [math]::Round((Get-Item "$DistFolder\kvgroove.exe").Length / 1MB, 2)
+$ExeSize = [math]::Round((Get-Item $ExeDest).Length / 1MB, 2)
 $ZipSize = [math]::Round((Get-Item $ZipPath).Length / 1MB, 2)
 Write-Host "  Executable: $ExeSize MB" -ForegroundColor Gray
 Write-Host "  Zip archive: $ZipSize MB" -ForegroundColor Gray
