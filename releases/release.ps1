@@ -72,7 +72,7 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 # Step 6: Push to remote
-Write-Host "[6/6] Pushing to GitHub..." -ForegroundColor Yellow
+Write-Host "[6/7] Pushing to GitHub..." -ForegroundColor Yellow
 git push origin main
 if ($LASTEXITCODE -ne 0) {
     Write-Host "Error: Push failed!" -ForegroundColor Red
@@ -80,16 +80,68 @@ if ($LASTEXITCODE -ne 0) {
 }
 Write-Host "Pushed to GitHub!" -ForegroundColor Green
 
+# Step 7: Create and push git tag
+Write-Host "[7/7] Creating release tag v$Version..." -ForegroundColor Yellow
+git tag -a "v$Version" -m "Release v$Version"
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "Warning: Tag may already exist" -ForegroundColor Yellow
+}
+git push origin "v$Version"
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "Warning: Tag push failed (may already exist on remote)" -ForegroundColor Yellow
+} else {
+    Write-Host "Tag v$Version created and pushed!" -ForegroundColor Green
+}
+
 # Summary
 Write-Host "`n========================================" -ForegroundColor Cyan
 Write-Host "  Release v$Version Complete!" -ForegroundColor Green
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host "`nRelease file: $ZipPath" -ForegroundColor White
 Write-Host "Zip size: $ZipSize MB" -ForegroundColor White
-Write-Host "`nNext steps:" -ForegroundColor Yellow
-Write-Host "  1. Go to: https://github.com/gerp93/KVGroove/releases/new" -ForegroundColor White
-Write-Host "  2. Tag version: v$Version" -ForegroundColor White
-Write-Host "  3. Title: KVGroove v$Version" -ForegroundColor White
-Write-Host "  4. Upload: $ZipName" -ForegroundColor White
-Write-Host "  5. Publish release!" -ForegroundColor White
-Write-Host ""
+
+Write-Host "`n----------------------------------------" -ForegroundColor DarkGray
+Write-Host "  HOW TO PUBLISH ON GITHUB RELEASES" -ForegroundColor Magenta
+Write-Host "----------------------------------------" -ForegroundColor DarkGray
+
+Write-Host "`n Step 1: Open the GitHub Releases page" -ForegroundColor Yellow
+Write-Host "   https://github.com/gerp93/KVGroove/releases/new" -ForegroundColor Cyan
+
+Write-Host "`n Step 2: The tag is already created!" -ForegroundColor Yellow
+Write-Host "   - Tag v$Version was pushed automatically" -ForegroundColor Green
+Write-Host "   - Select it from the 'Choose a tag' dropdown" -ForegroundColor White
+
+Write-Host "`n Step 3: Fill in release details" -ForegroundColor Yellow
+Write-Host "   - Release title: KVGroove v$Version" -ForegroundColor Green
+Write-Host "   - Description: Add release notes (new features, bug fixes, etc.)" -ForegroundColor White
+
+Write-Host "`n Step 4: Attach the release file" -ForegroundColor Yellow
+Write-Host "   - Drag and drop or click 'Attach binaries'" -ForegroundColor White
+Write-Host "   - Upload: $ZipPath" -ForegroundColor Green
+
+Write-Host "`n Step 5: Publish" -ForegroundColor Yellow
+Write-Host "   - Click the green 'Publish release' button" -ForegroundColor White
+
+Write-Host "`n----------------------------------------" -ForegroundColor DarkGray
+Write-Host "  SAMPLE RELEASE NOTES" -ForegroundColor Magenta
+Write-Host "----------------------------------------" -ForegroundColor DarkGray
+Write-Host @"
+
+## What's New in v$Version
+
+### Features
+- Feature 1
+- Feature 2
+
+### Bug Fixes
+- Fix 1
+- Fix 2
+
+### Download
+- **Windows:** Download ``KVGroove-v$Version-win64.zip``, extract, and run ``kvgroove.exe``
+
+"@ -ForegroundColor Gray
+
+Write-Host "========================================" -ForegroundColor Cyan
+Write-Host "  Done! Your release is ready to publish." -ForegroundColor Green
+Write-Host "========================================`n" -ForegroundColor Cyan
