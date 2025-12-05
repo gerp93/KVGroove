@@ -52,40 +52,32 @@ $ZipSize = [math]::Round((Get-Item $ZipPath).Length / 1MB, 2)
 Write-Host "  Executable: $ExeSize MB" -ForegroundColor Gray
 Write-Host "  Zip archive: $ZipSize MB" -ForegroundColor Gray
 
-# Step 3: Stage changes
-Write-Host "[3/6] Staging changes for git..." -ForegroundColor Yellow
-git add releases/$ZipName
-git add -A  # Stage any other pending changes
-Write-Host "Staged all changes" -ForegroundColor Green
 
-# Step 4: Commit with version message
-Write-Host "[4/6] Committing release..." -ForegroundColor Yellow
-$CommitMessage = "Release v$Version"
-git commit -m $CommitMessage
-if ($LASTEXITCODE -ne 0) {
-    Write-Host "Warning: Nothing to commit or commit failed" -ForegroundColor Yellow
-}
-
-# Step 5: Push to remote
-Write-Host "[5/6] Pushing to GitHub..." -ForegroundColor Yellow
-git push origin main
-if ($LASTEXITCODE -ne 0) {
-    Write-Host "Error: Push failed!" -ForegroundColor Red
-    exit 1
-}
-Write-Host "Pushed to GitHub!" -ForegroundColor Green
-
-# Step 6: Create and push git tag
-Write-Host "[6/6] Creating release tag v$Version..." -ForegroundColor Yellow
+# Step 3: Create and push git tag
+Write-Host "[3/3] Creating release tag v$Version..." -ForegroundColor Yellow
 git tag -a "v$Version" -m "Release v$Version"
 if ($LASTEXITCODE -ne 0) {
-    Write-Host "Warning: Tag may already exist" -ForegroundColor Yellow
-}
-git push origin "v$Version"
-if ($LASTEXITCODE -ne 0) {
-    Write-Host "Warning: Tag push failed (may already exist on remote)" -ForegroundColor Yellow
+    Write-Host "Warning: Tag v$Version already exists." -ForegroundColor Yellow
+    $resp = Read-Host "Do you want to delete and recreate the tag? (y/n)"
+    if ($resp -eq 'y') {
+        Write-Host "Deleting local tag..." -ForegroundColor Yellow
+        git tag -d "v$Version"
+        Write-Host "Deleting remote tag..." -ForegroundColor Yellow
+        git push origin :refs/tags/"v$Version"
+        Write-Host "Recreating tag..." -ForegroundColor Yellow
+        git tag -a "v$Version" -m "Release v$Version"
+        git push origin "v$Version"
+        Write-Host "Tag v$Version recreated and pushed!" -ForegroundColor Green
+    } else {
+        Write-Host "Tag not updated. Release will use existing tag." -ForegroundColor Yellow
+    }
 } else {
-    Write-Host "Tag v$Version created and pushed!" -ForegroundColor Green
+    git push origin "v$Version"
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "Warning: Tag push failed (may already exist on remote)" -ForegroundColor Yellow
+    } else {
+        Write-Host "Tag v$Version created and pushed!" -ForegroundColor Green
+    }
 }
 
 # Summary
