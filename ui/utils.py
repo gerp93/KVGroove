@@ -47,6 +47,6 @@ def open_file_location(track: Track, parent_window=None):
             # Open the parent directory
             folder = os.path.dirname(path)
             subprocess.Popen(['xdg-open', folder])
-    except Exception as e:
+    except (OSError, subprocess.SubprocessError) as e:
         messagebox.showerror("Error", f"Could not open file location: {e}", 
                            parent=parent_window)

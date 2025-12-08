@@ -173,7 +173,7 @@ class Library:
                 duration=duration,
                 created=created
             )
-        except Exception as e:
+        except (OSError, ValueError) as e:
             print(f"Error extracting metadata from {file_path}: {e}")
             return None
     
