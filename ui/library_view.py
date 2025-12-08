@@ -6,6 +6,10 @@ Panel for browsing and managing the music library
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 from typing import Callable, Optional, List
+from datetime import datetime
+import os
+import subprocess
+import platform
 from core.library import Library, Track
 from core.settings import SettingsManager
 from ui.track_editor import TrackEditorDialog
@@ -110,7 +114,7 @@ class LibraryView(ttk.Frame):
         list_frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
         
         # Treeview for tracks
-        columns = ('fav', 'title', 'artist', 'album', 'duration')
+        columns = ('fav', 'title', 'artist', 'album', 'duration', 'created')
         self.tree = ttk.Treeview(list_frame, columns=columns, show='headings', 
                                   selectmode='extended')
         
@@ -119,12 +123,14 @@ class LibraryView(ttk.Frame):
         self.tree.heading('artist', text='Artist', command=lambda: self._sort_by('artist'))
         self.tree.heading('album', text='Album', command=lambda: self._sort_by('album'))
         self.tree.heading('duration', text='Duration', command=lambda: self._sort_by('duration'))
+        self.tree.heading('created', text='Created', command=lambda: self._sort_by('created'))
         
         self.tree.column('fav', width=30, minwidth=30)
         self.tree.column('title', width=200, minwidth=100)
         self.tree.column('artist', width=150, minwidth=80)
         self.tree.column('album', width=150, minwidth=80)
         self.tree.column('duration', width=60, minwidth=50)
+        self.tree.column('created', width=80, minwidth=70)
         
         # Scrollbar
         scrollbar = ttk.Scrollbar(list_frame, orient=tk.VERTICAL, command=self.tree.yview)
@@ -148,6 +154,7 @@ class LibraryView(ttk.Frame):
         self.playlist_menu = tk.Menu(self.context_menu, tearoff=0)
         self.context_menu.add_cascade(label="Add to Playlist", menu=self.playlist_menu)
         self.context_menu.add_separator()
+        self.context_menu.add_command(label="Open in File Explorer", command=self._open_selected_location)
         self.context_menu.add_command(label="Edit Track Info...", command=self._edit_selected_track)
         
         # Sort state
@@ -165,6 +172,38 @@ class LibraryView(ttk.Frame):
         minutes = int(seconds // 60)
         secs = int(seconds % 60)
         return f"{minutes}:{secs:02d}"
+    
+    def _format_date(self, timestamp: float) -> str:
+        """Format timestamp as date"""
+        if timestamp <= 0:
+            return ""
+        try:
+            dt = datetime.fromtimestamp(timestamp)
+            return dt.strftime("%Y-%m-%d")
+        except:
+            return ""
+    
+    def _open_file_location(self, track: Track):
+        """Open file explorer at track location"""
+        try:
+            path = track.path
+            if not os.path.exists(path):
+                messagebox.showerror("Error", "File not found", parent=self.winfo_toplevel())
+                return
+            
+            system = platform.system()
+            if system == "Windows":
+                # Use explorer with /select to highlight the file
+                subprocess.Popen(['explorer', '/select,', os.path.normpath(path)])
+            elif system == "Darwin":  # macOS
+                subprocess.Popen(['open', '-R', path])
+            else:  # Linux
+                # Open the parent directory
+                folder = os.path.dirname(path)
+                subprocess.Popen(['xdg-open', folder])
+        except Exception as e:
+            messagebox.showerror("Error", f"Could not open file location: {e}", 
+                               parent=self.winfo_toplevel())
     
     def _on_view_change(self):
         """Handle view mode change"""
@@ -228,7 +267,8 @@ class LibraryView(ttk.Frame):
                 track.title,
                 track.artist,
                 track.album,
-                self._format_duration(track.duration)
+                self._format_duration(track.duration),
+                self._format_date(track.created)
             ))
         
         self.status_var.set(f"{len(tracks)} tracks")
@@ -329,6 +369,8 @@ class LibraryView(ttk.Frame):
         
         if column == 'duration':
             tracks.sort(key=lambda t: t.duration, reverse=self._sort_reverse)
+        elif column == 'created':
+            tracks.sort(key=lambda t: t.created, reverse=self._sort_reverse)
         else:
             tracks.sort(key=lambda t: getattr(t, column, '').lower(), 
                        reverse=self._sort_reverse)
@@ -383,6 +425,12 @@ class LibraryView(ttk.Frame):
         """Add selected tracks to a playlist"""
         for track in self._get_selected_tracks():
             self.on_add_to_playlist(track, playlist_name)
+    
+    def _open_selected_location(self):
+        """Open file explorer for selected track"""
+        tracks = self._get_selected_tracks()
+        if tracks:
+            self._open_file_location(tracks[0])
     
     def _edit_selected_track(self):
         """Open edit dialog for selected track"""

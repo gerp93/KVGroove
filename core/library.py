@@ -25,12 +25,16 @@ class Track:
     artist: str
     album: str
     duration: float  # seconds
+    created: float = 0.0  # file creation timestamp
     
     def to_dict(self) -> dict:
         return asdict(self)
     
     @classmethod
     def from_dict(cls, data: dict) -> 'Track':
+        # Handle old tracks without 'created' field
+        if 'created' not in data:
+            data['created'] = 0.0
         return cls(**data)
     
     def __eq__(self, other):
@@ -128,6 +132,9 @@ class Library:
             album = "Unknown Album"
             duration = 0.0
             
+            # Get file creation time
+            created = os.path.getctime(file_path)
+            
             if audio is not None:
                 if audio.info:
                     duration = audio.info.length
@@ -163,7 +170,8 @@ class Library:
                 title=title,
                 artist=artist,
                 album=album,
-                duration=duration
+                duration=duration,
+                created=created
             )
         except Exception as e:
             print(f"Error extracting metadata from {file_path}: {e}")

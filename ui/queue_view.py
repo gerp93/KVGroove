@@ -4,8 +4,12 @@ Panel for managing the play queue
 """
 
 import tkinter as tk
-from tkinter import ttk
+from tkinter import ttk, messagebox
 from typing import Callable, Optional, List
+from datetime import datetime
+import os
+import subprocess
+import platform
 from core.queue import PlayQueue
 from core.library import Library, Track
 
@@ -52,17 +56,23 @@ class QueueView(ttk.Frame):
         list_frame = ttk.Frame(self)
         list_frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
         
-        columns = ('index', 'title', 'artist')
+        columns = ('index', 'title', 'artist', 'album', 'duration', 'created')
         self.tree = ttk.Treeview(list_frame, columns=columns, show='headings',
                                   selectmode='extended')
         
         self.tree.heading('index', text='#')
         self.tree.heading('title', text='Title')
         self.tree.heading('artist', text='Artist')
+        self.tree.heading('album', text='Album')
+        self.tree.heading('duration', text='Duration')
+        self.tree.heading('created', text='Created')
         
         self.tree.column('index', width=30, minwidth=30)
         self.tree.column('title', width=180, minwidth=100)
         self.tree.column('artist', width=120, minwidth=80)
+        self.tree.column('album', width=120, minwidth=80)
+        self.tree.column('duration', width=60, minwidth=50)
+        self.tree.column('created', width=80, minwidth=70)
         
         scrollbar = ttk.Scrollbar(list_frame, orient=tk.VERTICAL, 
                                   command=self.tree.yview)
@@ -82,6 +92,8 @@ class QueueView(ttk.Frame):
         self.context_menu.add_command(label="Play Next", 
                                       command=self._move_to_next)
         self.context_menu.add_separator()
+        self.context_menu.add_command(label="Open in File Explorer", command=self._open_selected_location)
+        self.context_menu.add_separator()
         self.context_menu.add_command(label="Remove", 
                                       command=self._remove_selected)
         
@@ -96,6 +108,38 @@ class QueueView(ttk.Frame):
         minutes = int(seconds // 60)
         secs = int(seconds % 60)
         return f"{minutes}:{secs:02d}"
+    
+    def _format_date(self, timestamp: float) -> str:
+        """Format timestamp as date"""
+        if timestamp <= 0:
+            return ""
+        try:
+            dt = datetime.fromtimestamp(timestamp)
+            return dt.strftime("%Y-%m-%d")
+        except:
+            return ""
+    
+    def _open_file_location(self, track: Track):
+        """Open file explorer at track location"""
+        try:
+            path = track.path
+            if not os.path.exists(path):
+                messagebox.showerror("Error", "File not found", parent=self.winfo_toplevel())
+                return
+            
+            system = platform.system()
+            if system == "Windows":
+                # Use explorer with /select to highlight the file
+                subprocess.Popen(['explorer', '/select,', os.path.normpath(path)])
+            elif system == "Darwin":  # macOS
+                subprocess.Popen(['open', '-R', path])
+            else:  # Linux
+                # Open the parent directory
+                folder = os.path.dirname(path)
+                subprocess.Popen(['xdg-open', folder])
+        except Exception as e:
+            messagebox.showerror("Error", f"Could not open file location: {e}", 
+                               parent=self.winfo_toplevel())
     
     def refresh(self):
         """Refresh the queue display"""
@@ -118,11 +162,17 @@ class QueueView(ttk.Frame):
             if track:
                 title = track.title
                 artist = track.artist
+                album = track.album
+                duration = self._format_duration(track.duration)
+                created = self._format_date(track.created)
             else:
                 title = track_path.split('\\')[-1].split('/')[-1]
                 artist = "Unknown"
+                album = ""
+                duration = "--:--"
+                created = ""
             
-            item = self.tree.insert('', tk.END, values=(display_idx, title, artist))
+            item = self.tree.insert('', tk.END, values=(display_idx, title, artist, album, duration, created))
             
             # Highlight current track
             if i == current_idx:
@@ -192,6 +242,18 @@ class QueueView(ttk.Frame):
             self.queue.remove(idx)
         
         self.refresh()
+    
+    def _open_selected_location(self):
+        """Open file explorer for selected track"""
+        selection = self.tree.selection()
+        if selection:
+            idx = self.tree.index(selection[0])
+            queue_tracks = self.queue.get_queue()
+            if 0 <= idx < len(queue_tracks):
+                track_path = queue_tracks[idx]
+                track = self.library.get_track_by_path(track_path)
+                if track:
+                    self._open_file_location(track)
     
     def _clear_queue(self):
         """Clear the queue"""
