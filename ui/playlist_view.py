@@ -6,12 +6,9 @@ Panel for managing playlists
 import tkinter as tk
 from tkinter import ttk, simpledialog, messagebox
 from typing import Callable, Optional, List
-from datetime import datetime
-import os
-import subprocess
-import platform
 from core.playlist import PlaylistManager, Playlist
 from core.library import Library, Track
+from ui.utils import format_date, open_file_location
 
 
 class PlaylistView(ttk.Frame):
@@ -147,38 +144,6 @@ class PlaylistView(ttk.Frame):
         secs = int(seconds % 60)
         return f"{minutes}:{secs:02d}"
     
-    def _format_date(self, timestamp: float) -> str:
-        """Format timestamp as date"""
-        if timestamp <= 0:
-            return ""
-        try:
-            dt = datetime.fromtimestamp(timestamp)
-            return dt.strftime("%Y-%m-%d")
-        except:
-            return ""
-    
-    def _open_file_location(self, track: Track):
-        """Open file explorer at track location"""
-        try:
-            path = track.path
-            if not os.path.exists(path):
-                messagebox.showerror("Error", "File not found", parent=self.winfo_toplevel())
-                return
-            
-            system = platform.system()
-            if system == "Windows":
-                # Use explorer with /select to highlight the file
-                subprocess.Popen(['explorer', '/select,', os.path.normpath(path)])
-            elif system == "Darwin":  # macOS
-                subprocess.Popen(['open', '-R', path])
-            else:  # Linux
-                # Open the parent directory
-                folder = os.path.dirname(path)
-                subprocess.Popen(['xdg-open', folder])
-        except Exception as e:
-            messagebox.showerror("Error", f"Could not open file location: {e}", 
-                               parent=self.winfo_toplevel())
-    
     def _refresh_playlist_list(self):
         """Refresh the playlist list"""
         self.playlist_listbox.delete(0, tk.END)
@@ -201,7 +166,7 @@ class PlaylistView(ttk.Frame):
                     track.artist,
                     track.album,
                     self._format_duration(track.duration),
-                    self._format_date(track.created)
+                    format_date(track.created)
                 ))
             else:
                 # Track not in library anymore
@@ -310,7 +275,7 @@ class PlaylistView(ttk.Frame):
                 track_path = self.current_playlist.tracks[idx]
                 track = self.library.get_track_by_path(track_path)
                 if track:
-                    self._open_file_location(track)
+                    open_file_location(track, self.winfo_toplevel())
     
     def _remove_selected_tracks(self):
         """Remove selected tracks from playlist"""
