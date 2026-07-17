@@ -8,6 +8,7 @@ from tkinter import ttk, simpledialog, messagebox
 from typing import Callable, Optional, List
 from core.playlist import PlaylistManager, Playlist
 from core.library import Library, Track
+from ui.utils import format_date, open_file_location
 
 
 class PlaylistView(ttk.Frame):
@@ -94,17 +95,21 @@ class PlaylistView(ttk.Frame):
         track_container = ttk.Frame(right_frame)
         track_container.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
         
-        columns = ('title', 'artist', 'duration')
+        columns = ('title', 'artist', 'album', 'duration', 'created')
         self.track_tree = ttk.Treeview(track_container, columns=columns, 
                                         show='headings', selectmode='extended')
         
         self.track_tree.heading('title', text='Title')
         self.track_tree.heading('artist', text='Artist')
+        self.track_tree.heading('album', text='Album')
         self.track_tree.heading('duration', text='Duration')
+        self.track_tree.heading('created', text='Created')
         
         self.track_tree.column('title', width=200, minwidth=100)
         self.track_tree.column('artist', width=150, minwidth=80)
+        self.track_tree.column('album', width=120, minwidth=80)
         self.track_tree.column('duration', width=60, minwidth=50)
+        self.track_tree.column('created', width=80, minwidth=70)
         
         track_scroll = ttk.Scrollbar(track_container, orient=tk.VERTICAL,
                                      command=self.track_tree.yview)
@@ -121,6 +126,8 @@ class PlaylistView(ttk.Frame):
         self.track_context_menu = tk.Menu(self, tearoff=0)
         self.track_context_menu.add_command(label="Play", 
                                             command=self._play_selected_track)
+        self.track_context_menu.add_separator()
+        self.track_context_menu.add_command(label="Open in File Explorer", command=self._open_selected_location)
         self.track_context_menu.add_separator()
         self.track_context_menu.add_command(label="Remove from Playlist",
                                             command=self._remove_selected_tracks)
@@ -157,14 +164,18 @@ class PlaylistView(ttk.Frame):
                 self.track_tree.insert('', tk.END, values=(
                     track.title,
                     track.artist,
-                    self._format_duration(track.duration)
+                    track.album,
+                    self._format_duration(track.duration),
+                    format_date(track.created)
                 ))
             else:
                 # Track not in library anymore
                 self.track_tree.insert('', tk.END, values=(
                     track_path.split('\\')[-1].split('/')[-1],
                     "Unknown",
-                    "--:--"
+                    "",
+                    "--:--",
+                    ""
                 ))
         
         self.status_var.set(f"{len(self.current_playlist.tracks)} tracks")
@@ -251,6 +262,20 @@ class PlaylistView(ttk.Frame):
     def _play_selected_track(self):
         """Play the selected track"""
         self._on_track_double_click()
+    
+    def _open_selected_location(self):
+        """Open file explorer for selected track"""
+        if not self.current_playlist:
+            return
+        
+        selection = self.track_tree.selection()
+        if selection:
+            idx = self.track_tree.index(selection[0])
+            if 0 <= idx < len(self.current_playlist.tracks):
+                track_path = self.current_playlist.tracks[idx]
+                track = self.library.get_track_by_path(track_path)
+                if track:
+                    open_file_location(track, self.winfo_toplevel())
     
     def _remove_selected_tracks(self):
         """Remove selected tracks from playlist"""
