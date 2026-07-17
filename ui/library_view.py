@@ -20,15 +20,17 @@ class LibraryView(ttk.Frame):
                  on_add_to_queue: Callable[[Track], None],
                  on_add_to_playlist: Callable[[Track, str], None],
                  get_playlists: Callable[[], List[str]],
-                 settings: Optional[SettingsManager] = None):
+                 settings: Optional[SettingsManager] = None,
+                 on_delete_tracks: Optional[Callable[[List[str]], None]] = None):
         super().__init__(parent)
-        
+
         self.library = library
         self.on_track_double_click = on_track_double_click
         self.on_add_to_queue = on_add_to_queue
         self.on_add_to_playlist = on_add_to_playlist
         self.get_playlists = get_playlists
         self.settings = settings
+        self.on_delete_tracks = on_delete_tracks
         self.displayed_tracks: List[Track] = []
         self.current_view = "all"  # "all", "favorites", "recent", "folder"
         self.current_folder = None
@@ -140,6 +142,7 @@ class LibraryView(ttk.Frame):
         self.tree.bind('<Double-1>', self._on_double_click)
         self.tree.bind('<Return>', self._on_double_click)
         self.tree.bind('<Button-3>', self._show_context_menu)
+        self.tree.bind('<Delete>', lambda e: self._delete_selected())
         
         # Context menu
         self.context_menu = tk.Menu(self, tearoff=0)
@@ -153,6 +156,8 @@ class LibraryView(ttk.Frame):
         self.context_menu.add_separator()
         self.context_menu.add_command(label="Open in File Explorer", command=self._open_selected_location)
         self.context_menu.add_command(label="Edit Track Info...", command=self._edit_selected_track)
+        self.context_menu.add_separator()
+        self.context_menu.add_command(label="Delete from Computer", command=self._delete_selected)
         
         # Sort state
         self._sort_column = 'title'
@@ -397,6 +402,14 @@ class LibraryView(ttk.Frame):
         if tracks:
             open_file_location(tracks[0], self.winfo_toplevel())
     
+    def _delete_selected(self):
+        """Permanently delete the selected track files from disk"""
+        if not self.on_delete_tracks:
+            return
+        paths = [t.path for t in self._get_selected_tracks()]
+        if paths:
+            self.on_delete_tracks(paths)
+
     def _edit_selected_track(self):
         """Open edit dialog for selected track"""
         tracks = self._get_selected_tracks()

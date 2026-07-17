@@ -463,26 +463,29 @@ class MainWindow:
             on_add_to_queue=self._add_to_queue,
             on_add_to_playlist=self._add_to_playlist,
             get_playlists=lambda: self.playlist_view.get_playlist_names(),
-            settings=self.settings_manager
+            settings=self.settings_manager,
+            on_delete_tracks=self._delete_tracks
         )
         self.notebook.add(self.library_view, text="  Library  ")
-        
+
         # Playlists tab
         self.playlist_view = PlaylistView(
             self.notebook,
             self.playlist_manager,
             self.library,
             on_track_double_click=self._play_track,
-            on_play_playlist=self._play_playlist
+            on_play_playlist=self._play_playlist,
+            on_delete_tracks=self._delete_tracks
         )
         self.notebook.add(self.playlist_view, text="  Playlists  ")
-        
+
         # Queue tab
         self.queue_view = QueueView(
             self.notebook,
             self.queue,
             self.library,
-            on_track_double_click=self._play_queue_index
+            on_track_double_click=self._play_queue_index,
+            on_delete_tracks=self._delete_tracks
         )
         self.notebook.add(self.queue_view, text="  Queue  ")
     
@@ -530,6 +533,71 @@ class MainWindow:
         """Add track to queue"""
         self.queue.add(track.path)
         self.queue_view.refresh()
+
+    def _delete_tracks(self, paths: list):
+        """Permanently delete track files from disk and purge every reference
+        to them across the library, queue, playlists, favorites, and history."""
+        # De-duplicate while preserving order
+        seen = set()
+        unique_paths = []
+        for p in paths:
+            if p and p not in seen:
+                seen.add(p)
+                unique_paths.append(p)
+        if not unique_paths:
+            return
+
+        # Confirmation
+        count = len(unique_paths)
+        if count == 1:
+            name = Path(unique_paths[0]).name
+            msg = ("Permanently delete this file from your computer?\n\n"
+                   f"{name}\n{unique_paths[0]}\n\nThis cannot be undone.")
+        else:
+            msg = (f"Permanently delete these {count} files from your computer?\n\n"
+                   "This cannot be undone.")
+        if not messagebox.askyesno("Delete Files", msg, icon='warning',
+                                    parent=self.root):
+            return
+
+        deleted = 0
+        errors = []
+        for path in unique_paths:
+            # Release the file if the player currently holds it (Windows locks it)
+            if self.player.current_file and \
+                    Path(self.player.current_file) == Path(path):
+                self.player.stop()
+                self.player.current_file = None
+                if self.current_track and self.current_track.path == path:
+                    self.current_track = None
+                    self.title_var.set("No track playing")
+                    self.artist_var.set("")
+                self.play_btn_text.set("▶")
+
+            success, error = self.library.delete_track_file(path)
+            if success:
+                deleted += 1
+                # Purge references everywhere
+                self.settings_manager.remove_favorite(path)
+                self.settings_manager.remove_from_recently_played(path)
+                self.queue.remove_by_path(path)
+                self.playlist_manager.remove_track_from_all_playlists(path)
+            else:
+                errors.append(f"{Path(path).name}: {error}")
+
+        # Refresh every view so the removed tracks disappear immediately
+        self.library_view.refresh()
+        self.queue_view.refresh()
+        self.playlist_view.refresh()
+
+        if errors:
+            detail = "\n".join(errors[:10])
+            if len(errors) > 10:
+                detail += f"\n... and {len(errors) - 10} more"
+            messagebox.showerror(
+                "Delete Errors",
+                f"Deleted {deleted} of {count} file(s).\n\nCould not delete:\n{detail}",
+                parent=self.root)
     
     def _add_to_playlist(self, track: Track, playlist_name: str):
         """Add track to a playlist"""

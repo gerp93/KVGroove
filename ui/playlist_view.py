@@ -16,13 +16,15 @@ class PlaylistView(ttk.Frame):
     
     def __init__(self, parent, playlist_manager: PlaylistManager, library: Library,
                  on_track_double_click: Callable[[Track], None],
-                 on_play_playlist: Callable[[List[str]], None]):
+                 on_play_playlist: Callable[[List[str]], None],
+                 on_delete_tracks: Optional[Callable[[List[str]], None]] = None):
         super().__init__(parent)
-        
+
         self.playlist_manager = playlist_manager
         self.library = library
         self.on_track_double_click = on_track_double_click
         self.on_play_playlist = on_play_playlist
+        self.on_delete_tracks = on_delete_tracks
         self.current_playlist: Optional[Playlist] = None
         
         self._create_widgets()
@@ -131,6 +133,9 @@ class PlaylistView(ttk.Frame):
         self.track_context_menu.add_separator()
         self.track_context_menu.add_command(label="Remove from Playlist",
                                             command=self._remove_selected_tracks)
+        self.track_context_menu.add_separator()
+        self.track_context_menu.add_command(label="Delete from Computer",
+                                            command=self._delete_selected_tracks)
         
         # Status bar
         self.status_var = tk.StringVar()
@@ -299,6 +304,25 @@ class PlaylistView(ttk.Frame):
         self._refresh_track_list()
         self._refresh_playlist_list()
     
+    def _get_selected_track_paths(self) -> List[str]:
+        """Get file paths for the currently selected playlist tracks"""
+        if not self.current_playlist:
+            return []
+        paths = []
+        for item in self.track_tree.selection():
+            idx = self.track_tree.index(item)
+            if 0 <= idx < len(self.current_playlist.tracks):
+                paths.append(self.current_playlist.tracks[idx])
+        return paths
+
+    def _delete_selected_tracks(self):
+        """Permanently delete the selected track files from disk"""
+        if not self.on_delete_tracks:
+            return
+        paths = self._get_selected_track_paths()
+        if paths:
+            self.on_delete_tracks(paths)
+
     def _play_current_playlist(self):
         """Play all tracks in current playlist"""
         if self.current_playlist and self.current_playlist.tracks:

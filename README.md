@@ -15,6 +15,7 @@ A feature-rich Windows desktop music player built with Python and tkinter. Organ
 - **Favorites & Recently Played** - Mark favorite tracks and track your listening history
 - **Password Protection** - Optional password lock for library access
 - **Duplicate & Missing Detection** - Find duplicate tracks and detect missing files
+- **Delete Files** - Permanently delete tracks from disk (with confirmation) directly from the Library, Playlist, or Queue; removes them from the library, playlists, queue, favorites, and history
 - **Backup & Restore** - Backup and restore your library and playlists
 
 ## Supported Formats

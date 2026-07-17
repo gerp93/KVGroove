@@ -146,6 +146,18 @@ class PlaylistManager:
             return True
         return False
     
+    def remove_track_from_all_playlists(self, track_path: str) -> int:
+        """Remove a track from every playlist it appears in.
+        Returns the number of playlists affected."""
+        affected = 0
+        for playlist in self.playlists:
+            if track_path in playlist.tracks:
+                playlist.remove_track(track_path)
+                affected += 1
+        if affected:
+            self._save()
+        return affected
+
     def save(self):
         """Manually save playlists"""
         self._save()

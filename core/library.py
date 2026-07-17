@@ -274,3 +274,31 @@ class Library:
         if missing:
             self._save()
         return len(missing)
+
+    def remove_track(self, path: str) -> bool:
+        """Remove a track from the library index only (does not touch the file).
+        Returns True if a track was removed."""
+        before = len(self.tracks)
+        self.tracks = [t for t in self.tracks if t.path != path]
+        removed = len(self.tracks) < before
+        if removed:
+            self._save()
+        return removed
+
+    def delete_track_file(self, path: str) -> (bool, Optional[str]):
+        """Permanently delete a track's file from disk and remove it from the
+        library index.
+
+        Returns a (success, error_message) tuple. ``success`` is True when the
+        file is gone from disk (either deleted now or already missing); in that
+        case the track is also removed from the library index. On failure the
+        library index is left unchanged so the user can retry.
+        """
+        try:
+            if Path(path).exists():
+                os.remove(path)
+        except OSError as e:
+            return False, str(e)
+
+        self.remove_track(path)
+        return True, None

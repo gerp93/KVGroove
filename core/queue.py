@@ -49,6 +49,29 @@ class PlayQueue:
             return track
         return None
     
+    def remove_by_path(self, track_path: str) -> int:
+        """Remove every occurrence of a track path from the queue, history, and
+        saved unshuffled order. Adjusts the current index. Returns count removed."""
+        removed = 0
+        # Remove from the active queue, shifting current_index for each entry
+        # that is removed at or before the current position.
+        i = 0
+        while i < len(self._queue):
+            if self._queue[i] == track_path:
+                self._queue.pop(i)
+                if i < self._current_index:
+                    self._current_index -= 1
+                elif i == self._current_index:
+                    # Current track removed; clamp to remaining queue
+                    self._current_index = min(self._current_index, len(self._queue) - 1)
+                removed += 1
+            else:
+                i += 1
+
+        self._original_queue = [p for p in self._original_queue if p != track_path]
+        self._history = [p for p in self._history if p != track_path]
+        return removed
+
     def clear(self):
         """Clear the entire queue"""
         self._queue = []

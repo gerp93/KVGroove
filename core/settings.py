@@ -113,6 +113,12 @@ class SettingsManager:
         """Clear recently played history"""
         self.settings.recently_played = []
         self.save()
+
+    def remove_from_recently_played(self, track_path: str):
+        """Remove a track from recently played history"""
+        if track_path in self.settings.recently_played:
+            self.settings.recently_played.remove(track_path)
+            self.save()
     
     def add_favorite(self, track_path: str):
         """Add a track to favorites"""

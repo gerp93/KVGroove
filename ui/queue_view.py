@@ -15,12 +15,14 @@ class QueueView(ttk.Frame):
     """Queue management panel"""
     
     def __init__(self, parent, queue: PlayQueue, library: Library,
-                 on_track_double_click: Callable[[int], None]):
+                 on_track_double_click: Callable[[int], None],
+                 on_delete_tracks: Optional[Callable[[List[str]], None]] = None):
         super().__init__(parent)
-        
+
         self.queue = queue
         self.library = library
         self.on_track_double_click = on_track_double_click
+        self.on_delete_tracks = on_delete_tracks
         
         self._create_widgets()
     
@@ -91,8 +93,11 @@ class QueueView(ttk.Frame):
         self.context_menu.add_separator()
         self.context_menu.add_command(label="Open in File Explorer", command=self._open_selected_location)
         self.context_menu.add_separator()
-        self.context_menu.add_command(label="Remove", 
+        self.context_menu.add_command(label="Remove",
                                       command=self._remove_selected)
+        self.context_menu.add_separator()
+        self.context_menu.add_command(label="Delete from Computer",
+                                      command=self._delete_selected)
         
         # Status bar
         self.status_var = tk.StringVar()
@@ -220,6 +225,19 @@ class QueueView(ttk.Frame):
                 if track:
                     open_file_location(track, self.winfo_toplevel())
     
+    def _delete_selected(self):
+        """Permanently delete the selected track files from disk"""
+        if not self.on_delete_tracks:
+            return
+        queue_tracks = self.queue.get_queue()
+        paths = []
+        for item in self.tree.selection():
+            idx = self.tree.index(item)
+            if 0 <= idx < len(queue_tracks):
+                paths.append(queue_tracks[idx])
+        if paths:
+            self.on_delete_tracks(paths)
+
     def _clear_queue(self):
         """Clear the queue"""
         # Keep current track, clear the rest
