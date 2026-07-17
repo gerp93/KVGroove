@@ -286,18 +286,24 @@ class Library:
         return removed
 
     def delete_track_file(self, path: str) -> (bool, Optional[str]):
-        """Permanently delete a track's file from disk and remove it from the
+        """Send a track's file to the Recycle Bin and remove it from the
         library index.
 
-        Returns a (success, error_message) tuple. ``success`` is True when the
-        file is gone from disk (either deleted now or already missing); in that
-        case the track is also removed from the library index. On failure the
-        library index is left unchanged so the user can retry.
+        The file is moved to the OS Recycle Bin (recoverable) rather than
+        permanently erased. Returns a (success, error_message) tuple.
+        ``success`` is True when the file is gone from its source folder
+        (either trashed now or already missing); in that case the track is
+        also removed from the library index. On failure the library index is
+        left unchanged so the user can retry.
         """
         try:
             if Path(path).exists():
-                os.remove(path)
+                from send2trash import send2trash
+                send2trash(os.path.normpath(path))
         except OSError as e:
+            return False, str(e)
+        except Exception as e:
+            # send2trash raises its own error types on some platforms
             return False, str(e)
 
         self.remove_track(path)

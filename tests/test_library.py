@@ -1,4 +1,5 @@
 import json
+import os
 from pathlib import Path
 
 import pytest
@@ -101,7 +102,7 @@ def test_missing_and_remove(tmp_path):
     assert all(t.path != missing.path for t in lib.tracks)
 
 
-def test_delete_track_file_removes_from_disk_and_index(tmp_path):
+def test_delete_track_file_removes_from_source_and_index(tmp_path, monkeypatch):
     lib_file = tmp_path / 'library4.json'
     lib = Library(str(lib_file))
 
@@ -112,10 +113,21 @@ def test_delete_track_file_removes_from_disk_and_index(tmp_path):
     track = Track(path=str(song), title='S', artist='A', album='A', duration=1)
     lib.tracks = [track]
 
+    # Stub send2trash so the test doesn't depend on a real Recycle Bin;
+    # emulate its effect by removing the file from the source folder.
+    trashed = []
+
+    def fake_trash(p):
+        trashed.append(p)
+        os.remove(p)
+
+    monkeypatch.setattr('send2trash.send2trash', fake_trash)
+
     success, error = lib.delete_track_file(str(song))
     assert success is True
     assert error is None
-    assert not song.exists()
+    assert len(trashed) == 1
+    assert not song.exists()  # gone from the source folder
     assert lib.get_track_by_path(str(song)) is None
     # Change persisted
     data = json.loads(lib_file.read_text(encoding='utf-8'))

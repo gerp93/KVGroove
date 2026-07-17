@@ -551,11 +551,12 @@ class MainWindow:
         count = len(unique_paths)
         if count == 1:
             name = Path(unique_paths[0]).name
-            msg = ("Permanently delete this file from your computer?\n\n"
-                   f"{name}\n{unique_paths[0]}\n\nThis cannot be undone.")
+            msg = ("Delete this file from your computer?\n\n"
+                   f"{name}\n{unique_paths[0]}\n\n"
+                   "The file will be moved to the Recycle Bin.")
         else:
-            msg = (f"Permanently delete these {count} files from your computer?\n\n"
-                   "This cannot be undone.")
+            msg = (f"Delete these {count} files from your computer?\n\n"
+                   "The files will be moved to the Recycle Bin.")
         if not messagebox.askyesno("Delete Files", msg, icon='warning',
                                     parent=self.root):
             return
