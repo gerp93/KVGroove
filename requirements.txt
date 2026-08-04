@@ -1,4 +1,4 @@
 pygame>=2.5.0
 mutagen>=1.47.0
 Send2Trash>=1.8.0
-tkthemes @ git+https://github.com/gerp93/KVG_Themes.git
+visual-assault-tkinter @ git+https://github.com/gerp93/VisualAssault.git@v0.2.0#subdirectory=packages/tkinter
