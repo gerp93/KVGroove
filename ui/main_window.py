@@ -8,7 +8,9 @@ from tkinter import ttk, filedialog, messagebox, simpledialog
 from typing import Optional
 import json
 from pathlib import Path
+from threading import Thread
 
+from updater import CURRENT_VERSION, check_for_update, download_update, apply_update_and_restart
 from core.player import AudioPlayer
 from core.library import Library, Track
 from core.playlist import PlaylistManager
@@ -72,6 +74,9 @@ class MainWindow:
         
         # Handle window close
         self.root.protocol("WM_DELETE_WINDOW", self._on_close)
+
+        # Check for updates shortly after startup
+        self.root.after(1500, lambda: self._check_for_updates(manual=False))
     
     def _load_settings(self) -> dict:
         """Load settings from file"""
@@ -195,7 +200,10 @@ class MainWindow:
         menubar.add_cascade(label="Help", menu=help_menu)
         help_menu.add_command(label="Keyboard Shortcuts", command=self._show_keyboard_shortcuts, accelerator="F1")
         help_menu.add_separator()
+        help_menu.add_command(label="Check for Updates...", command=lambda: self._check_for_updates(manual=True))
+        help_menu.add_separator()
         help_menu.add_command(label="About KVGroove", command=self._show_about)
+        help_menu.add_command(label=f"Version {CURRENT_VERSION}", state=tk.DISABLED)
     
     def _open_password_settings(self):
         """Open password settings dialog"""
@@ -343,11 +351,47 @@ class MainWindow:
     
     def _show_about(self):
         """Show about dialog"""
-        messagebox.showinfo("About KVGroove", 
+        messagebox.showinfo("About KVGroove",
                            "KVGroove Music Player\n\n"
                            "A simple yet powerful music player\n"
                            "for Windows.\n\n"
                            "© 2025 KVGroove")
+
+    def _check_for_updates(self, manual: bool):
+        """Check GitHub Releases for a newer build (kvg_updater)"""
+        Thread(target=self._check_for_updates_worker, args=(manual,), daemon=True).start()
+
+    def _check_for_updates_worker(self, manual: bool):
+        update = check_for_update()
+
+        def show():
+            if update:
+                self._prompt_update(update)
+            elif manual:
+                messagebox.showinfo("Up to Date", f"You're running the latest version ({CURRENT_VERSION}).")
+
+        self.root.after(0, show)
+
+    def _prompt_update(self, update):
+        if not messagebox.askyesno(
+            "Update Available",
+            f"Version {update['version']} is available (you have {CURRENT_VERSION}).\n\n"
+            "Download and install it now? KVGroove will restart automatically.",
+        ):
+            return
+        Thread(target=self._download_and_apply_update, args=(update,), daemon=True).start()
+
+    def _download_and_apply_update(self, update):
+        try:
+            new_binary = download_update(update["download_url"])
+        except Exception as e:
+            self.root.after(0, lambda: messagebox.showerror("Update Failed", f"Could not download update: {e}"))
+            return
+        self.root.after(0, lambda: self._finish_update(new_binary))
+
+    def _finish_update(self, new_binary):
+        messagebox.showinfo("Restarting", "KVGroove will now restart to complete the update.")
+        apply_update_and_restart(new_binary)
     
     def _create_control_bar(self, parent):
         """Create the playback control bar"""
