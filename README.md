@@ -2,6 +2,11 @@
 
 A feature-rich Windows desktop music player built with Python and tkinter. Organize your music with playlists, queue up tracks, and enjoy playback with powerful controls and beautiful themes.
 
+This repo follows the shared conventions in
+[gerp93/KVG_Standards](https://github.com/gerp93/KVG_Standards) (theming,
+release/CI, self-update, licensing) — see that repo for the source of truth
+on any of them.
+
 ## Features
 
 - **Music Library** - Browse and search your music collection with metadata support
